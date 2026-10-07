@@ -72,3 +72,7 @@ python database/test_db.py
 ## Автор
 
 (Амантай Муслим)
+
+## Құжаттар
+
+- [Отыру логикасы](docs/fit-logic.md)
