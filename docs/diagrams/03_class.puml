@@ -1,0 +1,185 @@
+@startuml
+title TryOn: ER диаграммасы (14 кесте, Information Engineering нотациясы)
+
+' * = NOT NULL, <<PK>> = Primary Key, <<FK>> = Foreign Key
+' ||--o{  = «бір — көп»,  ||--o| = «бір — бір»,  |o--o{ = «міндетті емес байланыс»
+hide circle
+skinparam shadowing false
+skinparam linetype polyline
+skinparam entity {
+  BackgroundColor #FFFFFF
+  BorderColor #333333
+}
+
+entity roles {
+  * id : INT <<PK>>
+  --
+  * code : NVARCHAR(20)
+  * name : NVARCHAR(50)
+}
+
+entity users {
+  * id : INT <<PK>>
+  --
+  * email : NVARCHAR(255)
+  * password_hash : NVARCHAR(255)
+  * full_name : NVARCHAR(150)
+    phone : NVARCHAR(30)
+  * role_id : INT <<FK>>
+    shop_name : NVARCHAR(150)
+  * is_active : BIT
+  * created_at : DATETIME2(0)
+}
+
+entity body_profiles {
+  * user_id : INT <<PK>> <<FK>>
+  --
+  * sex : CHAR(1)
+  * height_cm : INT
+  * weight_kg : DECIMAL(5,1)
+  * chest_cm : DECIMAL(5,1)
+  * waist_cm : DECIMAL(5,1)
+  * hip_cm : DECIMAL(5,1)
+  * is_manual : BIT
+}
+
+entity addresses {
+  * id : INT <<PK>>
+  --
+  * user_id : INT <<FK>>
+  * city : NVARCHAR(100)
+  * street : NVARCHAR(150)
+  * house : NVARCHAR(20)
+    apartment : NVARCHAR(20)
+  * recipient_phone : NVARCHAR(30)
+  * is_default : BIT
+}
+
+entity categories {
+  * id : INT <<PK>>
+  --
+  * name : NVARCHAR(100)
+  * slug : NVARCHAR(100)
+    parent_id : INT <<FK>>
+}
+
+entity garment_types {
+  * code : NVARCHAR(20) <<PK>>
+  --
+  * name : NVARCHAR(50)
+  * slot : NVARCHAR(10)
+}
+
+entity fit_rules {
+  * id : INT <<PK>>
+  --
+  * garment_type : NVARCHAR(20) <<FK>>
+  * zone : NVARCHAR(10)
+  * tight_below : DECIMAL(4,1)
+  * loose_above : DECIMAL(4,1)
+}
+
+entity products {
+  * id : INT <<PK>>
+  --
+  * seller_id : INT <<FK>>
+  * category_id : INT <<FK>>
+  * garment_type : NVARCHAR(20) <<FK>>
+  * name : NVARCHAR(200)
+    description : NVARCHAR(1000)
+  * price : INT
+  * color_hex : CHAR(7)
+  * pattern : NVARCHAR(10)
+    print_kind : NVARCHAR(10)
+    image_path : NVARCHAR(300)
+  * is_active : BIT
+}
+
+entity product_sizes {
+  * id : INT <<PK>>
+  --
+  * product_id : INT <<FK>>
+  * size_label : NVARCHAR(10)
+  * sku : NVARCHAR(40)
+    chest_cm : DECIMAL(5,1)
+    hem_cm : DECIMAL(5,1)
+    waist_cm : DECIMAL(5,1)
+    hip_cm : DECIMAL(5,1)
+    thigh_cm : DECIMAL(5,1)
+    length_cm : DECIMAL(5,1)
+  * stock_qty : INT
+}
+
+entity cart_items {
+  * user_id : INT <<PK>> <<FK>>
+  * product_size_id : INT <<PK>> <<FK>>
+  --
+  * qty : INT
+}
+
+entity orders {
+  * id : INT <<PK>>
+  --
+  * customer_id : INT <<FK>>
+  * address_id : INT <<FK>>
+    manager_id : INT <<FK>>
+  * status : NVARCHAR(10)
+  * total_amount : INT
+  * created_at : DATETIME2(0)
+}
+
+entity order_items {
+  * id : INT <<PK>>
+  --
+  * order_id : INT <<FK>>
+  * product_size_id : INT <<FK>>
+  * product_name : NVARCHAR(200)
+  * unit_price : INT
+  * qty : INT
+}
+
+entity payments {
+  * id : INT <<PK>>
+  --
+  * order_id : INT <<FK>>
+  * amount : INT
+  * method : NVARCHAR(10)
+  * status : NVARCHAR(10)
+    paid_at : DATETIME2(0)
+}
+
+entity return_requests {
+  * id : INT <<PK>>
+  --
+  * order_item_id : INT <<FK>>
+  * qty : INT
+  * reason : NVARCHAR(20)
+    comment : NVARCHAR(500)
+  * status : NVARCHAR(10)
+    handled_by : INT <<FK>>
+    refund_amount : INT
+  * created_at : DATETIME2(0)
+}
+
+' ----- Байланыстар: ата-кесте ||--o{ бала-кесте : FK бағаны
+roles ||--o{ users : role_id
+users ||--o| body_profiles : user_id
+users ||--o{ addresses : user_id
+categories |o--o{ categories : parent_id
+garment_types ||--o{ fit_rules : garment_type
+users ||--o{ products : seller_id
+categories ||--o{ products : category_id
+garment_types ||--o{ products : garment_type
+products ||--o{ product_sizes : product_id
+users ||--o{ cart_items : user_id
+product_sizes ||--o{ cart_items : product_size_id
+users ||--o{ orders : customer_id
+addresses ||--o{ orders : address_id
+users |o--o{ orders : manager_id
+orders ||--o{ order_items : order_id
+product_sizes ||--o{ order_items : product_size_id
+orders ||--o{ payments : order_id
+order_items ||--o{ return_requests : order_item_id
+users |o--o{ return_requests : handled_by
+
+@enduml
