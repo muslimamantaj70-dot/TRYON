@@ -1,0 +1,208 @@
+@startuml
+title TryOn: Class Diagram
+
+' Көрінгіштік: - жабық (private), + ашық (public). Типтер: атрибут: Тип, әдіс(параметр: Тип): Қайтару типі
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam packageStyle rectangle
+skinparam ArrowColor #333333
+skinparam ArrowFontSize 11
+skinparam class {
+  BackgroundColor White
+  BorderColor #333333
+  HeaderBackgroundColor #DDE6F2
+}
+hide empty members
+
+package "Пайдаланушылар" #E8F1FB {
+  abstract class User {
+    - id: int
+    - email: String
+    - passwordHash: String
+    - fullName: String
+    - phone: String
+    - isActive: boolean
+    + register(): void
+    + login(email: String, password: String): boolean
+    + logout(): void
+  }
+  class Customer {
+    + updateBodyProfile(p: BodyProfile): void
+    + tryOn(size: ProductSize): Map<String,String>
+    + placeOrder(address: Address): Order
+    + requestReturn(item: OrderItem, qty: int, reason: String): ReturnRequest
+  }
+  class Seller {
+    - shopName: String
+    + addProduct(p: Product): void
+    + setSizeChart(sizes: ProductSize[]): void
+    + restock(size: ProductSize, qty: int): void
+  }
+  class Manager {
+    + processOrder(o: Order): void
+    + approveReturn(r: ReturnRequest): void
+    + rejectReturn(r: ReturnRequest): void
+  }
+  class Admin {
+    + manageUsers(): void
+    + manageCatalog(): void
+    + viewReports(): void
+  }
+  class BodyProfile {
+    - sex: char
+    - heightCm: int
+    - weightKg: decimal
+    - chestCm: decimal
+    - waistCm: decimal
+    - hipCm: decimal
+    - isManual: boolean
+    + estimateMeasurements(): void
+  }
+  class Address {
+    - city: String
+    - street: String
+    - house: String
+    - apartment: String
+    - recipientPhone: String
+    - isDefault: boolean
+  }
+}
+
+package "Каталог" #FFF4DC {
+  class Category {
+    - name: String
+    - slug: String
+  }
+  class Product {
+    - id: int
+    - name: String
+    - description: String
+    - price: int
+    - garmentType: GarmentType
+    - colorHex: String
+    - pattern: String
+    - isActive: boolean
+    + getSizes(): ProductSize[]
+    + isAvailable(): boolean
+  }
+  class ProductSize {
+    - sizeLabel: String
+    - sku: String
+    - chestCm: decimal
+    - hemCm: decimal
+    - waistCm: decimal
+    - hipCm: decimal
+    - thighCm: decimal
+    - stockQty: int
+    + hasStock(qty: int): boolean
+  }
+  enum GarmentType {
+    TEE
+    SWEATER
+    SHORTS
+    PANTS
+    SNEAKERS
+  }
+}
+
+package "Тапсырыс және төлем" #E5F4EA {
+  class Cart {
+    + addItem(size: ProductSize, qty: int): void
+    + removeItem(size: ProductSize): void
+    + getTotal(): int
+    + checkout(address: Address): Order
+  }
+  class CartItem {
+    - qty: int
+    + getLineTotal(): int
+  }
+  class Order {
+    - id: int
+    - createdAt: DateTime
+    - status: OrderStatus
+    - totalAmount: int
+    + changeStatus(s: OrderStatus): void
+    + cancel(): void
+  }
+  class OrderItem {
+    - productName: String
+    - unitPrice: int
+    - qty: int
+    + getLineTotal(): int
+  }
+  class Payment {
+    - amount: int
+    - method: String
+    - status: String
+    + pay(): boolean
+    + refund(amount: int): void
+  }
+  class ReturnRequest {
+    - qty: int
+    - reason: String
+    - comment: String
+    - status: ReturnStatus
+    - refundAmount: int
+    + approve(m: Manager): void
+    + reject(m: Manager): void
+    + refund(): void
+  }
+  enum OrderStatus {
+    NEW
+    PAID
+    PACKED
+    SHIPPED
+    DELIVERED
+    CANCELLED
+  }
+  enum ReturnStatus {
+    REQUESTED
+    APPROVED
+    REJECTED
+    REFUNDED
+  }
+}
+
+package "Отыру (FitCalculator)" #EDE7F6 {
+  class FitCalculator <<service>> {
+    - tightBelowCm: decimal
+    - looseAboveCm: decimal
+    + recommendSize(p: BodyProfile, sizes: ProductSize[]): ProductSize
+    + fitZones(p: BodyProfile, s: ProductSize): Map<String,String>
+  }
+}
+
+' ----- Мұрагерлік (generalization)
+User <|-- Customer
+User <|-- Seller
+User <|-- Manager
+User <|-- Admin
+
+' ----- Композиция (толтырылған ромб): бөлік иесінсіз өмір сүрмейді
+Customer "1" *-- "1" BodyProfile
+Customer "1" *-- "0..*" Address
+Customer "1" *-- "1" Cart
+Cart "1" *-- "0..*" CartItem
+Order "1" *-- "1..*" OrderItem
+Product "1" *-- "1..*" ProductSize
+
+' ----- Ассоциация (еселікпен)
+Customer "1" -- "0..*" Order : places
+CartItem "*" -- "1" ProductSize
+OrderItem "*" -- "1" ProductSize
+Order "1" -- "0..*" Payment : paid by
+OrderItem "1" -- "0..*" ReturnRequest : returned in
+Manager "0..1" -- "0..*" Order : processes
+Manager "0..1" -- "0..*" ReturnRequest : handles
+Seller "1" -- "0..*" Product : sells
+Product "*" -- "1" Category : belongs to
+Category "0..1" -- "0..*" Category : parent
+
+' ----- Тәуелділік (үзік көрсеткі)
+FitCalculator ..> BodyProfile : <<use>>
+FitCalculator ..> ProductSize : <<use>>
+Cart ..> Order : <<create>>
+Admin ..> Product : <<manage>>
+
+@enduml
