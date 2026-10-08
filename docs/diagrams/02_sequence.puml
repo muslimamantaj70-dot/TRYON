@@ -1,0 +1,58 @@
+@startuml
+title «Киімді таңдау және тапсырыс беру»: Sequence диаграммасы
+
+autonumber
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+' ---- Қатысушылар (lifeline): атаулар Class диаграммасындағы кластармен бірдей
+actor "Клиент\n(User)" as Customer
+participant "Интерфейс\n(UI)" as UI
+participant Product
+participant CartItem
+participant Order
+participant ProductSize
+participant Payment
+
+' ---- 1. Тауарды таңдау, өлшем ұсыну
+Customer -> UI : Тауарды таңдау
+activate UI
+UI -> Product : getSizes()
+activate Product
+Product --> UI : ProductSize[]
+UI -> Product : recommendSize(profile)
+Product --> UI : ұсынылған өлшем
+deactivate Product
+UI --> Customer : 3D манекенде киімді көрсету
+
+' ---- 2. Себетке қосу
+Customer -> UI : Өлшемді таңдап, себетке қосу
+UI -> CartItem : <<create>> (size, qty)
+
+' ---- 3. Тапсырыс беру
+Customer -> UI : Тапсырысты рәсімдеу
+UI -> Order : create(customer, address)
+activate Order
+Order -> CartItem : findByUser(user)
+activate CartItem
+CartItem --> Order : CartItem[]
+deactivate CartItem
+Order -> ProductSize : hasStock(qty)
+activate ProductSize
+ProductSize --> Order : true / false
+deactivate ProductSize
+
+alt hasStock = true
+  Order -> Payment : pay()
+  activate Payment
+  Payment --> Order : төлем расталды
+  deactivate Payment
+else тауар жоқ
+  Order --> UI : тапсырыс жасалмайды
+end
+
+Order --> UI : Order
+deactivate Order
+UI --> Customer : Хабарлама: тапсырыс қабылданды
+deactivate UI
+@enduml
