@@ -1,7 +1,8 @@
 @startuml
-title TryOn: Class Diagram
+title TryOn: Class диаграммасы (дерекқордың 14 кестесіне сәйкес)
 
-' Көрінгіштік: - жабық (private), + ашық (public). Типтер: атрибут: Тип, әдіс(параметр: Тип): Қайтару типі
+' Әр класс = дерекқордағы бір кесте, әр байланыс = бір FOREIGN KEY (барлығы 19).
+' Көрінгіштік: - жабық (private), + ашық (public). Атрибут: атауы: Тип, әдіс(параметр: Тип): Қайтару типі
 skinparam classAttributeIconSize 0
 skinparam shadowing false
 skinparam roundCorner 8
@@ -16,38 +17,24 @@ skinparam class {
 hide empty members
 
 package "Пайдаланушылар" #E8F1FB {
-  abstract class User {
+  class Role {
+    - id: int
+    - code: String
+    - name: String
+  }
+  class User {
     - id: int
     - email: String
     - passwordHash: String
     - fullName: String
     - phone: String
+    - shopName: String
     - isActive: boolean
+    - createdAt: DateTime
     + register(): void
     + login(email: String, password: String): boolean
     + logout(): void
-  }
-  class Customer {
-    + updateBodyProfile(p: BodyProfile): void
-    + tryOn(size: ProductSize): Map<String,String>
-    + placeOrder(address: Address): Order
     + requestReturn(item: OrderItem, qty: int, reason: String): ReturnRequest
-  }
-  class Seller {
-    - shopName: String
-    + addProduct(p: Product): void
-    + setSizeChart(sizes: ProductSize[]): void
-    + restock(size: ProductSize, qty: int): void
-  }
-  class Manager {
-    + processOrder(o: Order): void
-    + approveReturn(r: ReturnRequest): void
-    + rejectReturn(r: ReturnRequest): void
-  }
-  class Admin {
-    + manageUsers(): void
-    + manageCatalog(): void
-    + viewReports(): void
   }
   class BodyProfile {
     - sex: char
@@ -69,21 +56,36 @@ package "Пайдаланушылар" #E8F1FB {
   }
 }
 
-package "Каталог" #FFF4DC {
+package "Каталог және отыру ережелері" #FFF4DC {
   class Category {
+    - id: int
     - name: String
     - slug: String
+  }
+  class GarmentType {
+    - code: String
+    - name: String
+    - slot: String
+    + getRules(): FitRule[]
+  }
+  class FitRule {
+    - zone: String
+    - tightBelowCm: decimal
+    - looseAboveCm: decimal
+    + verdict(diffCm: decimal): String
   }
   class Product {
     - id: int
     - name: String
     - description: String
     - price: int
-    - garmentType: GarmentType
     - colorHex: String
     - pattern: String
+    - printKind: String
+    - imagePath: String
     - isActive: boolean
     + getSizes(): ProductSize[]
+    + recommendSize(p: BodyProfile): ProductSize
     + isAvailable(): boolean
   }
   class ProductSize {
@@ -94,34 +96,24 @@ package "Каталог" #FFF4DC {
     - waistCm: decimal
     - hipCm: decimal
     - thighCm: decimal
+    - lengthCm: decimal
     - stockQty: int
     + hasStock(qty: int): boolean
   }
-  enum GarmentType {
-    TEE
-    SWEATER
-    SHORTS
-    PANTS
-    SNEAKERS
-  }
 }
 
-package "Тапсырыс және төлем" #E5F4EA {
-  class Cart {
-    + addItem(size: ProductSize, qty: int): void
-    + removeItem(size: ProductSize): void
-    + getTotal(): int
-    + checkout(address: Address): Order
-  }
+package "Сатып алу" #E5F4EA {
   class CartItem {
     - qty: int
+    + findByUser(u: User): CartItem[]
     + getLineTotal(): int
   }
   class Order {
     - id: int
-    - createdAt: DateTime
     - status: OrderStatus
     - totalAmount: int
+    - createdAt: DateTime
+    + create(customer: User, address: Address): Order
     + changeStatus(s: OrderStatus): void
     + cancel(): void
   }
@@ -135,8 +127,8 @@ package "Тапсырыс және төлем" #E5F4EA {
     - amount: int
     - method: String
     - status: String
+    - paidAt: DateTime
     + pay(): boolean
-    + refund(amount: int): void
   }
   class ReturnRequest {
     - qty: int
@@ -144,8 +136,9 @@ package "Тапсырыс және төлем" #E5F4EA {
     - comment: String
     - status: ReturnStatus
     - refundAmount: int
-    + approve(m: Manager): void
-    + reject(m: Manager): void
+    - createdAt: DateTime
+    + approve(m: User): void
+    + reject(m: User): void
     + refund(): void
   }
   enum OrderStatus {
@@ -164,45 +157,50 @@ package "Тапсырыс және төлем" #E5F4EA {
   }
 }
 
-package "Отыру (FitCalculator)" #EDE7F6 {
-  class FitCalculator <<service>> {
-    - tightBelowCm: decimal
-    - looseAboveCm: decimal
-    + recommendSize(p: BodyProfile, sizes: ProductSize[]): ProductSize
-    + fitZones(p: BodyProfile, s: ProductSize): Map<String,String>
-  }
-}
-
-' ----- Мұрагерлік (generalization)
-User <|-- Customer
-User <|-- Seller
-User <|-- Manager
-User <|-- Admin
-
 ' ----- Композиция (толтырылған ромб): бөлік иесінсіз өмір сүрмейді
-Customer "1" *-- "1" BodyProfile
-Customer "1" *-- "0..*" Address
-Customer "1" *-- "1" Cart
-Cart "1" *-- "0..*" CartItem
-Order "1" *-- "1..*" OrderItem
+' body_profiles.user_id
+User "1" *-- "0..1" BodyProfile
+' addresses.user_id
+User "1" *-- "0..*" Address
+' product_sizes.product_id
 Product "1" *-- "1..*" ProductSize
+' order_items.order_id
+Order "1" *-- "1..*" OrderItem
 
-' ----- Ассоциация (еселікпен)
-Customer "1" -- "0..*" Order : places
-CartItem "*" -- "1" ProductSize
-OrderItem "*" -- "1" ProductSize
-Order "1" -- "0..*" Payment : paid by
-OrderItem "1" -- "0..*" ReturnRequest : returned in
-Manager "0..1" -- "0..*" Order : processes
-Manager "0..1" -- "0..*" ReturnRequest : handles
-Seller "1" -- "0..*" Product : sells
-Product "*" -- "1" Category : belongs to
+' ----- Ассоциация (еселікпен); түсініктемеде FK бағаны көрсетілген
+' users.role_id
+Role "1" -- "0..*" User : has role
+' categories.parent_id
 Category "0..1" -- "0..*" Category : parent
+' products.seller_id
+User "1" -- "0..*" Product : sells
+' products.category_id
+Category "1" -- "0..*" Product
+' products.garment_type
+GarmentType "1" -- "0..*" Product
+' fit_rules.garment_type
+GarmentType "1" -- "0..*" FitRule
+' cart_items.user_id
+User "1" -- "0..*" CartItem : cart
+' cart_items.product_size_id
+ProductSize "1" -- "0..*" CartItem
+' orders.customer_id
+User "1" -- "0..*" Order : places
+' orders.manager_id
+User "0..1" -- "0..*" Order : processes
+' orders.address_id
+Address "1" -- "0..*" Order : ships to
+' order_items.product_size_id
+ProductSize "1" -- "0..*" OrderItem
+' payments.order_id
+Order "1" -- "0..*" Payment : paid by
+' return_requests.order_item_id
+OrderItem "1" -- "0..*" ReturnRequest : returned in
+' return_requests.handled_by
+User "0..1" -- "0..*" ReturnRequest : handles
 
 ' ----- Тәуелділік (үзік көрсеткі)
-FitCalculator ..> BodyProfile : <<use>>
-FitCalculator ..> ProductSize : <<use>>
-Cart ..> Order : <<create>>
-Admin ..> Product : <<manage>>
+Product ..> BodyProfile : <<use>>
+User ..> Order : <<create>>
 
 @enduml
